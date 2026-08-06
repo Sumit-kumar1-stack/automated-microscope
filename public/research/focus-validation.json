@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "title": "Real Microscopy Focus Validation",
+  "dataset": "BBBC006",
+  "datasetProvider": "Broad Bioimage Benchmark Collection",
+  "algorithm": "Laplacian Variance",
+  "benchmarkVersion": "0.3.0",
+  "generatedAt": "2026-08-06T20:45:12.562356+00:00",
+  "status": "PASS",
+  "metrics": {
+    "fieldsEvaluated": 12,
+    "focusBandSuccessPercent": 100.0,
+    "exactOptimumPercent": 75.0,
+    "meanErrorMicrons": 2.0,
+    "medianErrorPlanes": 0.0,
+    "maximumErrorPlanes": 4,
+    "curveDirectionPercent": 73.96
+  },
+  "groundTruth": {
+    "laserOptimalZ": 16,
+    "expertFocusBand": [
+      11,
+      23
+    ],
+    "micronsPerPlane": 2.0
+  },
+  "sampling": {
+    "zPlanes": [
+      0,
+      4,
+      8,
+      12,
+      16,
+      20,
+      24,
+      28,
+      32
+    ],
+    "fieldCount": 12
+  },
+  "sampleCurve": [
+    {
+      "z": 0,
+      "focusScore": 91.43
+    },
+    {
+      "z": 4,
+      "focusScore": 91.35
+    },
+    {
+      "z": 8,
+      "focusScore": 89.94
+    },
+    {
+      "z": 12,
+      "focusScore": 90.63
+    },
+    {
+      "z": 16,
+      "focusScore": 147.74
+    },
+    {
+      "z": 20,
+      "focusScore": 101.13
+    },
+    {
+      "z": 24,
+      "focusScore": 88.67
+    },
+    {
+      "z": 28,
+      "focusScore": 88.58
+    },
+    {
+      "z": 32,
+      "focusScore": 88.11
+    }
+  ],
+  "limitations": [
+    "A subset of BBBC006 fields is evaluated.",
+    "Only selected Z planes are sampled rather than every available plane.",
+    "Fields with very low nuclei counts are excluded from this initial benchmark.",
+    "Results measure engineering focus performance and do not constitute clinical validation."
+  ],
+  "disclaimer": "Engineering research validation only. Not clinical validation."
+}
