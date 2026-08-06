@@ -18,11 +18,9 @@ type Props = {
   items:
     AnalysisSnapshot[];
 
-  onDelete:
-    (
-      id:
-        string,
-    ) => void;
+  onDelete: (
+    id: string,
+  ) => void;
 };
 
 export function AnalysisHistory({
@@ -33,25 +31,26 @@ export function AnalysisHistory({
     <section className="card historyCard">
       <div className="cardHeader">
         <div>
-          ANALYSIS HISTORY
+          RECENT ANALYSES
         </div>
 
-        <span>
-          LOCAL INDEXEDDB
+        <span className="historyHeaderCount">
+          {items.length}
+          {" "}
+          RECORDS
         </span>
       </div>
 
-      {items.length ===
-      0 ? (
+      {items.length === 0 ? (
         <div className="historyEmpty">
           No analysis records yet.
+          Run an analysis to create your first
+          report snapshot.
         </div>
       ) : (
         <div className="historyGrid">
           {items.map(
-            (
-              snapshot,
-            ) => {
+            (snapshot) => {
               const profile =
                 getTestProfile(
                   snapshot.profileId,
@@ -64,12 +63,20 @@ export function AnalysisHistory({
                   }
                   className="historyItem"
                 >
-                  <img
-                    src={
-                      snapshot.imageDataUrl
-                    }
-                    alt="Analyzed microscope field"
-                  />
+                  <div className="historyImageWrap">
+                    <img
+                      src={
+                        snapshot.imageDataUrl
+                      }
+                      alt="Analyzed microscope field"
+                    />
+
+                    <span className="historyMode">
+                      {
+                        snapshot.acquisitionMode
+                      }
+                    </span>
+                  </div>
 
                   <div className="historyContent">
                     <div className="historyTop">
@@ -81,46 +88,46 @@ export function AnalysisHistory({
                         </strong>
 
                         <small>
-                          {
-                            formatDate(
-                              snapshot.createdAt,
-                            )
-                          }
+                          {formatDate(
+                            snapshot.createdAt,
+                          )}
                         </small>
                       </div>
 
-                      <span>
-                        {
-                          snapshot.focusScore.toFixed(
-                            1,
-                          )
-                        }
-                      </span>
-                    </div>
-
-                    <div className="historyStats">
-                      <small>
-                        Focus{" "}
+                      <span className="historyFocus">
                         {
                           snapshot.relativeDetail
                         }
                         %
-                      </small>
+                      </span>
+                    </div>
 
-                      <small>
-                        Candidates{" "}
-                        {
-                          snapshot.analysis
-                            ?.total ??
-                          "—"
-                        }
-                      </small>
+                    <div className="historyStats">
+                      <div>
+                        <span>
+                          Focus score
+                        </span>
 
-                      <small>
-                        {
-                          snapshot.acquisitionMode
-                        }
-                      </small>
+                        <strong>
+                          {snapshot.focusScore.toFixed(
+                            1,
+                          )}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          Candidates
+                        </span>
+
+                        <strong>
+                          {
+                            snapshot.analysis
+                              ?.total ??
+                            "—"
+                          }
+                        </strong>
+                      </div>
                     </div>
 
                     <div className="historyActions">
@@ -153,8 +160,9 @@ export function AnalysisHistory({
                             snapshot.id,
                           )
                         }
+                        aria-label="Delete analysis"
                       >
-                        DELETE
+                        ×
                       </button>
                     </div>
                   </div>
@@ -169,10 +177,18 @@ export function AnalysisHistory({
 }
 
 function formatDate(
-  value:
-    string,
+  value: string,
 ): string {
   return new Date(
     value,
-  ).toLocaleString();
+  ).toLocaleString(
+    [],
+    {
+      dateStyle:
+        "medium",
+
+      timeStyle:
+        "short",
+    },
+  );
 }

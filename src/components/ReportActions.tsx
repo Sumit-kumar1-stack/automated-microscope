@@ -16,8 +16,7 @@ import {
 
 type Props = {
   snapshot:
-    | AnalysisSnapshot
-    | null;
+    AnalysisSnapshot | null;
 
   profile:
     TestProfile;
@@ -28,15 +27,12 @@ export function ReportActions({
   profile,
 }: Props) {
   function downloadImage() {
-    if (
-      !snapshot
-    ) {
+    if (!snapshot) {
       return;
     }
 
     downloadAnalysisImage(
       snapshot.imageDataUrl,
-
       createImageFilename(
         snapshot,
         profile,
@@ -45,9 +41,7 @@ export function ReportActions({
   }
 
   function downloadPdf() {
-    if (
-      !snapshot
-    ) {
+    if (!snapshot) {
       return;
     }
 
@@ -61,43 +55,55 @@ export function ReportActions({
     <div className="card reportCard">
       <div className="cardHeader">
         <div>
-          ANALYSIS REPORT
+          EXPORT REPORT
         </div>
 
         <span>
-          PNG + PDF
+          PDF + PNG
         </span>
       </div>
 
-      <button
-        className="primary"
-        disabled={
-          !snapshot
-        }
-        onClick={
-          downloadPdf
-        }
-      >
-        DOWNLOAD PDF REPORT
-      </button>
+      <div className="reportBody">
+        <div className="reportReady">
+          <span
+            className={
+              snapshot
+                ? "reportReadyDot"
+                : "reportReadyDot off"
+            }
+          />
 
-      <button
-        disabled={
-          !snapshot
-        }
-        onClick={
-          downloadImage
-        }
-      >
-        DOWNLOAD ANALYZED IMAGE
-      </button>
+          <span>
+            {snapshot
+              ? "Latest analysis ready to export"
+              : "Analyze a field to create a report"}
+          </span>
+        </div>
 
-      <p className="tiny">
-        The PDF contains the active test
-        protocol, focus measurements,
-        configured analysis measurements
-        and the frozen analyzed image.
-      </p>
+        <div className="reportActions">
+          <button
+            className="primary"
+            disabled={!snapshot}
+            onClick={downloadPdf}
+          >
+            DOWNLOAD PDF
+          </button>
+
+          <button
+            disabled={!snapshot}
+            onClick={downloadImage}
+          >
+            SAVE IMAGE
+          </button>
+        </div>
+
+        <p className="reportHint">
+          Reports include the frozen analyzed
+          image, active protocol, focus
+          measurements and configured research
+          measurements.
+        </p>
+      </div>
     </div>
   );
 }

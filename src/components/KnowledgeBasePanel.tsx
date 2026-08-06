@@ -3,8 +3,7 @@ import type {
 } from "@/knowledge/test-profiles";
 
 type Props = {
-  profile:
-    TestProfile;
+  profile: TestProfile;
 };
 
 export function KnowledgeBasePanel({
@@ -12,140 +11,124 @@ export function KnowledgeBasePanel({
 }: Props) {
   return (
     <div className="card knowledgeCard">
-      <div className="cardHeader">
-        <div>
-          KNOWLEDGE BASE
-        </div>
+      <details className="knowledgeDetails">
+        <summary>
+          <div className="knowledgeSummaryTitle">
+            <strong>
+              Protocol details
+            </strong>
 
-        <span>
-          {
-            profile.version
-          }
-        </span>
-      </div>
+            <span>
+              {profile.detector.label}
+              {" "}
+              •
+              {" "}
+              {profile.version}
+            </span>
+          </div>
 
-      <div className="knowledgeBody">
-        <KnowledgeRow
-          label="Protocol"
-          value={
-            profile.name
-          }
-        />
-
-        <KnowledgeRow
-          label="Specimen"
-          value={
-            profile.specimenType
-          }
-        />
-
-        <KnowledgeRow
-          label="Focus"
-          value="Laplacian variance"
-        />
-
-        <KnowledgeRow
-          label="Detector"
-          value={
-            profile
-              .detector
-              .label
-          }
-        />
-
-        <div className="knowledgeBlock">
-          <span>
-            TARGETS
+          <span className="knowledgeChevron">
+           ⌄
           </span>
+        </summary>
 
-          {profile
-            .targetClasses
-            .length ===
-          0 ? (
-            <p>
-              No biological classes
-            </p>
-          ) : (
-            <div className="knowledgeTags">
-              {profile.targetClasses.map(
-                (
-                  target,
-                ) => (
+        <div className="knowledgeBody">
+          <div className="resultRow">
+            <span>
+              Protocol
+            </span>
+
+            <strong>
+              {profile.name}
+            </strong>
+          </div>
+
+          <div className="resultRow">
+            <span>
+              Specimen
+            </span>
+
+            <strong>
+              {profile.specimenType}
+            </strong>
+          </div>
+
+          <div className="resultRow">
+            <span>
+              Focus
+            </span>
+
+            <strong>
+              Laplacian variance
+            </strong>
+          </div>
+
+          <div className="resultRow">
+            <span>
+              Detector
+            </span>
+
+            <strong>
+              {profile.detector.label}
+            </strong>
+          </div>
+
+          <div className="knowledgeBlock">
+            <span>
+              Target classes
+            </span>
+
+            {profile.targetClasses.length ===
+            0 ? (
+              <div className="knowledgeTags">
+                <small>
+                  Focus measurement only
+                </small>
+              </div>
+            ) : (
+              <div className="knowledgeTags">
+                {profile.targetClasses.map(
+                  (target) => (
+                    <small key={target}>
+                      {target}
+                    </small>
+                  ),
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="knowledgeBlock">
+            <span>
+              Measurements
+            </span>
+
+            <div className="knowledgeMeasurements">
+              {profile.measurements.map(
+                (measurement) => (
                   <small
                     key={
-                      target
+                      measurement.key
                     }
                   >
-                    {
-                      target
-                    }
+                    {measurement.label}
                   </small>
                 ),
               )}
             </div>
+          </div>
+
+          {profile.status ===
+            "research-config" && (
+            <p className="knowledgeWarning">
+              This protocol currently contains
+              configuration only. A validated
+              target-specific detector has not
+              been installed.
+            </p>
           )}
         </div>
-
-        <div className="knowledgeBlock">
-          <span>
-            MEASUREMENTS
-          </span>
-
-          <div className="knowledgeMeasurements">
-            {profile.measurements.map(
-              (
-                measurement,
-              ) => (
-                <small
-                  key={
-                    measurement.key
-                  }
-                >
-                  {
-                    measurement.label
-                  }
-                </small>
-              ),
-            )}
-          </div>
-        </div>
-
-        {profile.status ===
-          "research-config" && (
-          <p className="knowledgeWarning">
-            Detector configuration exists,
-            but target-specific automated
-            detection is not implemented.
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function KnowledgeRow({
-  label,
-  value,
-}: {
-  label:
-    string;
-
-  value:
-    string;
-}) {
-  return (
-    <div className="resultRow">
-      <span>
-        {
-          label
-        }
-      </span>
-
-      <strong>
-        {
-          value
-        }
-      </strong>
+      </details>
     </div>
   );
 }
