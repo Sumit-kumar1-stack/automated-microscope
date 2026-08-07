@@ -15,6 +15,10 @@ import {
 } from "@/lib/autofocus-engine";
 
 import {
+  ResearchValidationPanel,
+} from "@/components/ResearchValidationPanel";
+
+import {
   MICROSCOPE_CONFIG,
   type MicroscopeMode,
 } from "@/lib/microscope-config";
@@ -2957,6 +2961,8 @@ export function MicroscopePrototype() {
           );
         }}
       />
+
+      <ResearchValidationPanel />
 
       {/* ==================================================
           STATUS
