@@ -1,0 +1,18 @@
+# This is a Dockerfile-specific ignore file.
+# Build from the repository root with:
+# docker build -f research/inference-service/Dockerfile -t microscope-inference:v2 .
+
+**
+
+!research/
+!research/inference-service/
+!research/inference-service/app.py
+!research/inference-service/config.py
+!research/inference-service/observability.py
+!research/inference-service/requirements.txt
+!research/inference-service/security.py
+
+!research/malaria-validation/
+!research/malaria-validation/outputs/
+!research/malaria-validation/outputs/frozen-models/
+!research/malaria-validation/outputs/frozen-models/**

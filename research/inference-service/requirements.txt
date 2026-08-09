@@ -1,0 +1,12 @@
+# Frozen from the working Windows research environment on 2026-08-09.
+# Keep versions pinned so packaging changes do not silently change model behavior.
+fastapi==0.141.1
+uvicorn==0.52.1
+python-multipart==0.0.32
+ultralytics==8.4.115
+torch==2.13.0
+torchvision==0.28.0
+Pillow==11.3.0
+numpy==2.5.1
+opencv-python==5.0.0.93
+pydantic==2.13.4

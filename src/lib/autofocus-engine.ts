@@ -27,32 +27,82 @@ export type AutofocusResult = {
   samples: AutofocusSample[];
 };
 
-export async function abortableSleep(
+function abortableSleep(
   ms: number,
-  signal: AbortSignal,
+  signal?: AbortSignal,
 ): Promise<void> {
-  if (signal.aborted) {
-    throw createAbortError();
-  }
+  return new Promise(
+    (
+      resolve,
+      reject,
+    ) => {
+      if (
+        signal?.aborted
+      ) {
+        const error =
+          new Error(
+            "Operation aborted.",
+          );
 
-  await new Promise<void>((resolve, reject) => {
-    const timer = window.setTimeout(() => {
-      cleanup();
-      resolve();
-    }, ms);
+        error.name =
+          "AbortError";
 
-    const onAbort = () => {
-      window.clearTimeout(timer);
-      cleanup();
-      reject(createAbortError());
-    };
+        reject(
+          error,
+        );
 
-    const cleanup = () => {
-      signal.removeEventListener("abort", onAbort);
-    };
+        return;
+      }
 
-    signal.addEventListener("abort", onAbort, { once: true });
-  });
+
+      const timer =
+        globalThis.setTimeout(
+          () => {
+            signal?.removeEventListener(
+              "abort",
+              onAbort,
+            );
+
+            resolve();
+          },
+          ms,
+        );
+
+
+      const onAbort =
+        () => {
+          globalThis.clearTimeout(
+            timer,
+          );
+
+          signal?.removeEventListener(
+            "abort",
+            onAbort,
+          );
+
+          const error =
+            new Error(
+              "Operation aborted.",
+            );
+
+          error.name =
+            "AbortError";
+
+          reject(
+            error,
+          );
+        };
+
+
+      signal?.addEventListener(
+        "abort",
+        onAbort,
+        {
+          once: true,
+        },
+      );
+    },
+  );
 }
 
 export async function runCoarseFineAutofocus(
