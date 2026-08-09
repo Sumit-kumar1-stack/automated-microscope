@@ -2752,3 +2752,1430 @@ summary:focus-visible {
       1fr;
   }
 }
+
+/* =========================================================
+   REAL-WORLD INSTRUMENT APPLICATION SHELL
+   ========================================================= */
+
+.labApp {
+  min-height:
+    100vh;
+
+  display:
+    grid;
+
+  grid-template-columns:
+    238px
+    minmax(
+      0,
+      1fr
+    );
+
+  background:
+    #05090c;
+
+  transition:
+    grid-template-columns
+    180ms ease;
+}
+
+.labAppSidebarCollapsed {
+  grid-template-columns:
+    76px
+    minmax(
+      0,
+      1fr
+    );
+}
+
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+.labSidebar {
+  position:
+    sticky;
+
+  top:
+    0;
+
+  height:
+    100vh;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  padding:
+    17px 13px;
+
+  overflow:
+    hidden;
+
+  border-right:
+    1px solid
+    rgba(
+      91,
+      126,
+      138,
+      0.2
+    );
+
+  background:
+    linear-gradient(
+      180deg,
+      #091116
+      0%,
+      #070d11
+      100%
+    );
+
+  z-index:
+    80;
+}
+
+.labBrand {
+  min-height:
+    48px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    11px;
+
+  padding:
+    3px 5px;
+}
+
+.labBrandMark {
+  width:
+    38px;
+
+  height:
+    38px;
+
+  flex:
+    0 0 38px;
+
+  display:
+    grid;
+
+  place-items:
+    center;
+
+  border:
+    1px solid
+    rgba(
+      77,
+      228,
+      193,
+      0.32
+    );
+
+  border-radius:
+    9px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(
+        77,
+        228,
+        193,
+        0.16
+      ),
+      rgba(
+        77,
+        228,
+        193,
+        0.035
+      )
+    );
+
+  color:
+    var(
+      --accent
+    );
+
+  box-shadow:
+    inset
+    0 0 20px
+    rgba(
+      77,
+      228,
+      193,
+      0.035
+    );
+}
+
+.labBrandCopy {
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  line-height:
+    1.05;
+}
+
+.labBrandCopy strong {
+  color:
+    #edf8fa;
+
+  font-size:
+    13px;
+
+  font-weight:
+    730;
+
+  letter-spacing:
+    0.02em;
+}
+
+.labBrandCopy span {
+  margin-top:
+    4px;
+
+  color:
+    #73909a;
+
+  font-size:
+    11px;
+
+  letter-spacing:
+    0.04em;
+}
+
+.labSidebarDivider {
+  height:
+    1px;
+
+  margin:
+    13px 4px
+    17px;
+
+  background:
+    rgba(
+      107,
+      137,
+      148,
+      0.14
+    );
+}
+
+.labNavigation {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    20px;
+}
+
+.labNavGroup {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    5px;
+}
+
+.labNavGroupLabel {
+  padding:
+    0 10px 5px;
+
+  color:
+    #55717b;
+
+  font-size:
+    9px;
+
+  font-weight:
+    800;
+
+  letter-spacing:
+    0.15em;
+}
+
+button.labNavItem {
+  position:
+    relative;
+
+  width:
+    100%;
+
+  min-height:
+    39px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    10px;
+
+  padding:
+    8px 9px;
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    7px;
+
+  background:
+    transparent;
+
+  color:
+    #8da5ae;
+
+  text-align:
+    left;
+
+  box-shadow:
+    none;
+}
+
+button.labNavItem:hover:not(
+  :disabled
+) {
+  border-color:
+    rgba(
+      77,
+      228,
+      193,
+      0.13
+    );
+
+  background:
+    rgba(
+      77,
+      228,
+      193,
+      0.055
+    );
+
+  color:
+    #d9ebef;
+
+  transform:
+    none;
+}
+
+button.labNavItem:disabled {
+  opacity:
+    0.42;
+
+  cursor:
+    default;
+}
+
+button.labNavItemActive {
+  border-color:
+    rgba(
+      77,
+      228,
+      193,
+      0.19
+    );
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(
+        77,
+        228,
+        193,
+        0.12
+      ),
+      rgba(
+        77,
+        228,
+        193,
+        0.025
+      )
+    );
+
+  color:
+    #dbfff7;
+}
+
+.labNavIcon {
+  width:
+    22px;
+
+  height:
+    22px;
+
+  flex:
+    0 0 22px;
+
+  display:
+    grid;
+
+  place-items:
+    center;
+
+  color:
+    currentColor;
+}
+
+.labNavItemActive
+.labNavIcon {
+  color:
+    var(
+      --accent
+    );
+}
+
+.labNavText {
+  min-width:
+    0;
+
+  flex:
+    1;
+
+  overflow:
+    hidden;
+
+  font-size:
+    12px;
+
+  font-weight:
+    580;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}
+
+.labNavSoon {
+  padding:
+    2px 4px;
+
+  border:
+    1px solid
+    rgba(
+      137,
+      158,
+      166,
+      0.2
+    );
+
+  border-radius:
+    4px;
+
+  color:
+    #617983;
+
+  font-size:
+    7px;
+
+  font-weight:
+    800;
+
+  letter-spacing:
+    0.08em;
+}
+
+.labNavActiveDot {
+  width:
+    5px;
+
+  height:
+    5px;
+
+  border-radius:
+    50%;
+
+  background:
+    var(
+      --accent
+    );
+
+  box-shadow:
+    0 0 9px
+    rgba(
+      77,
+      228,
+      193,
+      0.8
+    );
+}
+
+.labCollapsedActiveDot {
+  position:
+    absolute;
+
+  right:
+    2px;
+
+  width:
+    4px;
+
+  height:
+    16px;
+
+  border-radius:
+    3px;
+
+  background:
+    var(
+      --accent
+    );
+}
+
+.labSidebarSpacer {
+  flex:
+    1;
+}
+
+.labProtocol {
+  position:
+    relative;
+
+  margin-top:
+    20px;
+
+  padding:
+    12px;
+
+  overflow:
+    hidden;
+
+  border:
+    1px solid
+    rgba(
+      77,
+      228,
+      193,
+      0.14
+    );
+
+  border-radius:
+    8px;
+
+  background:
+    rgba(
+      77,
+      228,
+      193,
+      0.035
+    );
+}
+
+.labProtocolCollapsed {
+  height:
+    42px;
+
+  padding:
+    0;
+
+  display:
+    grid;
+
+  place-items:
+    center;
+}
+
+.labProtocolIndicator {
+  position:
+    absolute;
+
+  top:
+    0;
+
+  left:
+    0;
+
+  bottom:
+    0;
+
+  width:
+    2px;
+
+  background:
+    var(
+      --accent
+    );
+}
+
+.labProtocolEyebrow {
+  display:
+    block;
+
+  margin-bottom:
+    7px;
+
+  color:
+    #607e87;
+
+  font-size:
+    8px;
+
+  font-weight:
+    800;
+
+  letter-spacing:
+    0.13em;
+}
+
+.labProtocol strong {
+  display:
+    block;
+
+  color:
+    #d9ecef;
+
+  font-size:
+    11px;
+
+  font-weight:
+    680;
+
+  line-height:
+    1.35;
+}
+
+.labProtocolMeta {
+  display:
+    block;
+
+  margin-top:
+    5px;
+
+  color:
+    #657f88;
+
+  font-size:
+    9px;
+}
+
+.labSidebarFooter {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    3px;
+
+  margin-top:
+    12px;
+
+  padding:
+    9px 8px 3px;
+
+  color:
+    #627a83;
+}
+
+.labSidebarFooter span {
+  font-size:
+    8px;
+
+  font-weight:
+    800;
+
+  letter-spacing:
+    0.1em;
+}
+
+.labSidebarFooter small {
+  font-size:
+    9px;
+}
+
+
+/* =========================================================
+   MAIN APPLICATION STAGE
+   ========================================================= */
+
+.labStage {
+  min-width:
+    0;
+
+  min-height:
+    100vh;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  background:
+    linear-gradient(
+      180deg,
+      #070c10,
+      #05090c
+    );
+}
+
+
+/* =========================================================
+   TOP APPLICATION BAR
+   ========================================================= */
+
+.labTopBar {
+  position:
+    sticky;
+
+  top:
+    0;
+
+  z-index:
+    70;
+
+  min-height:
+    67px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    24px;
+
+  padding:
+    10px 20px;
+
+  border-bottom:
+    1px solid
+    rgba(
+      89,
+      123,
+      136,
+      0.18
+    );
+
+  background:
+    rgba(
+      7,
+      13,
+      17,
+      0.94
+    );
+
+  backdrop-filter:
+    blur(
+      14px
+    );
+}
+
+.labTopBarLeft {
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+}
+
+button.labSidebarToggle {
+  width:
+    36px;
+
+  height:
+    36px;
+
+  display:
+    grid;
+
+  place-items:
+    center;
+
+  padding:
+    0;
+
+  border-color:
+    rgba(
+      105,
+      136,
+      147,
+      0.2
+    );
+
+  background:
+    #0b1419;
+
+  color:
+    #91a9b1;
+}
+
+.labBreadcrumb {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    7px;
+
+  margin-bottom:
+    3px;
+
+  color:
+    #647c85;
+
+  font-size:
+    9px;
+
+  font-weight:
+    700;
+
+  letter-spacing:
+    0.06em;
+
+  text-transform:
+    uppercase;
+}
+
+.labBreadcrumb span {
+  color:
+    #38505a;
+}
+
+.labWorkspaceTitle {
+  color:
+    #e8f4f6;
+
+  font-size:
+    14px;
+
+  font-weight:
+    670;
+
+  letter-spacing:
+    -0.01em;
+}
+
+.labTopBarRight {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    9px;
+}
+
+.labSessionBadge,
+.labResearchBadge {
+  min-height:
+    38px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    8px;
+
+  padding:
+    6px 10px;
+
+  border:
+    1px solid
+    rgba(
+      92,
+      125,
+      137,
+      0.18
+    );
+
+  border-radius:
+    7px;
+
+  background:
+    rgba(
+      14,
+      24,
+      30,
+      0.7
+    );
+}
+
+.labSessionBadge div,
+.labResearchBadge div {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    1px;
+}
+
+.labSessionBadge small,
+.labResearchBadge small {
+  color:
+    #5f7a84;
+
+  font-size:
+    7px;
+
+  font-weight:
+    800;
+
+  letter-spacing:
+    0.12em;
+}
+
+.labSessionBadge strong,
+.labResearchBadge strong {
+  color:
+    #bdcfd4;
+
+  font-size:
+    9px;
+
+  font-weight:
+    720;
+
+  letter-spacing:
+    0.03em;
+}
+
+.labSessionDot {
+  width:
+    7px;
+
+  height:
+    7px;
+
+  border-radius:
+    50%;
+
+  background:
+    var(
+      --success
+    );
+
+  box-shadow:
+    0 0 8px
+    rgba(
+      103,
+      230,
+      168,
+      0.55
+    );
+}
+
+.labResearchBadge {
+  border-color:
+    rgba(
+      241,
+      200,
+      107,
+      0.18
+    );
+
+  color:
+    var(
+      --warning
+    );
+}
+
+.labResearchBadge strong {
+  color:
+    #d9be82;
+}
+
+
+/* =========================================================
+   EXISTING MICROSCOPE APPLICATION INSIDE NEW SHELL
+   ========================================================= */
+
+.labContent {
+  min-width:
+    0;
+
+  flex:
+    1;
+}
+
+.labContent
+.shell {
+  width:
+    100%;
+
+  max-width:
+    none;
+
+  margin:
+    0;
+
+  padding:
+    20px
+    22px
+    50px;
+}
+
+/*
+ * Existing microscope topbar becomes
+ * the instrument-workspace command header.
+ */
+.labContent
+.shell
+> .topbar {
+  margin:
+    0 0 14px;
+
+  padding:
+    15px 16px;
+
+  align-items:
+    center;
+
+  border:
+    1px solid
+    rgba(
+      74,
+      109,
+      121,
+      0.18
+    );
+
+  border-radius:
+    9px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(
+        14,
+        24,
+        30,
+        0.86
+      ),
+      rgba(
+        9,
+        17,
+        22,
+        0.84
+      )
+    );
+
+  box-shadow:
+    0 10px
+    35px
+    rgba(
+      0,
+      0,
+      0,
+      0.12
+    );
+}
+
+.labContent
+.shell
+> .topbar h1 {
+  margin:
+    2px 0 4px;
+
+  font-size:
+    clamp(
+      19px,
+      1.7vw,
+      25px
+    );
+
+  letter-spacing:
+    -0.025em;
+}
+
+.labContent
+.shell
+> .topbar
+.eyebrow {
+  font-size:
+    9px;
+
+  letter-spacing:
+    0.12em;
+}
+
+.labContent
+.shell
+> .topbar
+.subtle {
+  max-width:
+    650px;
+
+  font-size:
+    10px;
+}
+
+
+/* Give the old dashboard a denser
+   professional instrument feel. */
+
+.labContent
+.card {
+  border-radius:
+    9px;
+}
+
+.labContent
+.statusStrip {
+  gap:
+    8px;
+
+  margin-bottom:
+    12px;
+}
+
+.labContent
+.workspace {
+  gap:
+    12px;
+}
+
+.labContent
+.bottomGrid {
+  gap:
+    12px;
+}
+
+
+/* =========================================================
+   SYSTEM STATUS BAR
+   ========================================================= */
+
+.labSystemBar {
+  position:
+    sticky;
+
+  bottom:
+    0;
+
+  z-index:
+    60;
+
+  min-height:
+    31px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    18px;
+
+  padding:
+    5px 20px;
+
+  border-top:
+    1px solid
+    rgba(
+      86,
+      117,
+      128,
+      0.18
+    );
+
+  background:
+    rgba(
+      6,
+      11,
+      14,
+      0.96
+    );
+
+  backdrop-filter:
+    blur(
+      10px
+    );
+}
+
+.labSystemGroup {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    18px;
+}
+
+.labSystemItem {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    5px;
+
+  color:
+    #718992;
+
+  font-size:
+    8px;
+
+  white-space:
+    nowrap;
+}
+
+.labSystemItem strong {
+  color:
+    #aebfc4;
+
+  font-size:
+    8px;
+
+  font-weight:
+    680;
+}
+
+.labSystemLabel {
+  color:
+    #58717a;
+}
+
+.labSystemDot {
+  width:
+    5px;
+
+  height:
+    5px;
+
+  border-radius:
+    50%;
+
+  background:
+    #63808a;
+}
+
+.labSystemDotGood {
+  background:
+    var(
+      --success
+    );
+
+  box-shadow:
+    0 0 7px
+    rgba(
+      103,
+      230,
+      168,
+      0.6
+    );
+}
+
+.labSystemDisclaimer {
+  padding-left:
+    16px;
+
+  border-left:
+    1px solid
+    rgba(
+      241,
+      200,
+      107,
+      0.17
+    );
+
+  color:
+    #a88f5c;
+
+  font-size:
+    7px;
+
+  font-weight:
+    800;
+
+  letter-spacing:
+    0.11em;
+}
+
+
+/* =========================================================
+   RESPONSIVE APPLICATION SHELL
+   ========================================================= */
+
+@media (
+  max-width:
+    1100px
+) {
+  .labApp {
+    grid-template-columns:
+      76px
+      minmax(
+        0,
+        1fr
+      );
+  }
+
+  .labSidebar
+  .labBrandCopy,
+  .labSidebar
+  .labNavGroupLabel,
+  .labSidebar
+  .labNavText,
+  .labSidebar
+  .labNavSoon,
+  .labSidebar
+  .labNavActiveDot,
+  .labSidebar
+  .labProtocol
+  > :not(
+    .labProtocolIndicator
+  ),
+  .labSidebarFooter {
+    display:
+      none;
+  }
+
+  .labNavItem {
+    justify-content:
+      center;
+  }
+
+  .labTopBarRight
+  .labSessionBadge {
+    display:
+      none;
+  }
+}
+
+@media (
+  max-width:
+    760px
+) {
+  .labApp,
+  .labAppSidebarCollapsed {
+    grid-template-columns:
+      60px
+      minmax(
+        0,
+        1fr
+      );
+  }
+
+  .labSidebar {
+    padding:
+      12px 8px;
+  }
+
+  .labBrand {
+    justify-content:
+      center;
+
+    padding:
+      0;
+  }
+
+  .labBrandMark {
+    width:
+      36px;
+
+    height:
+      36px;
+
+    flex-basis:
+      36px;
+  }
+
+  .labContent
+  .shell {
+    padding:
+      12px
+      10px
+      44px;
+  }
+
+  .labTopBar {
+    min-height:
+      58px;
+
+    padding:
+      8px 10px;
+  }
+
+  .labResearchBadge
+  div {
+    display:
+      none;
+  }
+
+  .labResearchBadge {
+    width:
+      34px;
+
+    min-height:
+      34px;
+
+    justify-content:
+      center;
+
+    padding:
+      0;
+  }
+
+  .labSystemBar {
+    padding:
+      5px 10px;
+  }
+
+  .labSystemGroup
+  .labSystemItem:not(
+    :first-child
+  ) {
+    display:
+      none;
+  }
+
+  .labSystemDisclaimer {
+    border-left:
+      0;
+
+    padding-left:
+      0;
+  }
+}

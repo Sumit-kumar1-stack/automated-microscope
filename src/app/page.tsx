@@ -1,5 +1,15 @@
-import { MicroscopePrototype } from "@/components/MicroscopePrototype";
+import {
+  MicroscopePrototype,
+} from "@/components/MicroscopePrototype";
+
+import {
+  AppShell,
+} from "@/components/shell/AppShell";
 
 export default function Home() {
-  return <MicroscopePrototype />;
+  return (
+    <AppShell>
+      <MicroscopePrototype />
+    </AppShell>
+  );
 }
