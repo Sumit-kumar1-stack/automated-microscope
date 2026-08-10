@@ -1,0 +1,4 @@
+remotezip==0.12.3
+numpy>=1.26,<3
+opencv-python-headless>=4.10,<5
+Pillow>=10.4,<12

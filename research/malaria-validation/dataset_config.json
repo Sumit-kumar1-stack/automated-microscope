@@ -1,0 +1,29 @@
+{
+  "datasetId": "BBBC041",
+  "version": "1",
+  "title": "P. vivax malaria infected human blood smears",
+  "provider": "Broad Bioimage Benchmark Collection",
+  "modality": "Bright-field microscopy",
+  "stain": "Giemsa",
+  "purpose": "Research-only malaria cell detection and classification benchmark",
+  "observedImages": 1328,
+"trainingImages": 1208,
+"testImages": 120,
+  "approximateCells": 80000,
+  "annotationType": [
+    "bounding_boxes",
+    "class_labels"
+  ],
+  "classes": [
+    "red_blood_cell",
+    "leukocyte",
+    "gametocyte",
+    "ring",
+    "trophozoite",
+    "schizont",
+    "difficult"
+  ],
+  "license": "CC BY-NC-SA 3.0",
+  "commercialTrainingApproved": false,
+  "researchUseOnly": true
+}

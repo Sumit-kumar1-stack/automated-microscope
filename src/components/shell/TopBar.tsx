@@ -1,7 +1,11 @@
 type TopBarProps = {
-  sidebarCollapsed: boolean;
-  onToggleSidebar: () => void;
+  sidebarCollapsed:
+    boolean;
+
+  onToggleSidebar:
+    () => void;
 };
+
 
 export function TopBar({
   sidebarCollapsed,
@@ -13,28 +17,38 @@ export function TopBar({
         <button
           type="button"
           className="labSidebarToggle"
-          onClick={onToggleSidebar}
+          onClick={
+            onToggleSidebar
+          }
           aria-label={
             sidebarCollapsed
               ? "Expand sidebar"
               : "Collapse sidebar"
           }
         >
-          ☰
+          <span aria-hidden="true">
+            ☰
+          </span>
         </button>
 
-        <div>
+
+        <div className="labTopBarIdentity">
           <div className="labBreadcrumb">
             Research Platform
-            <span>/</span>
-            Workspace
+
+            <span>
+              /
+            </span>
+
+            Automated Microscopy
           </div>
 
           <div className="labWorkspaceTitle">
-            Microscope Control
+            Automated Microscopy Workstation
           </div>
         </div>
       </div>
+
 
       <div className="labTopBarRight">
         <div className="labSessionBadge">
@@ -51,14 +65,26 @@ export function TopBar({
           </div>
         </div>
 
+
+        <div className="labRuntimeBadge">
+          <small>
+            PLATFORM
+          </small>
+
+          <strong>
+            PHASE 8
+          </strong>
+        </div>
+
+
         <div className="labResearchBadge">
           <div>
             <small>
-              STATUS
+              SCIENTIFIC STATUS
             </small>
 
             <strong>
-              RESEARCH USE ONLY
+              RESEARCH ONLY
             </strong>
           </div>
         </div>

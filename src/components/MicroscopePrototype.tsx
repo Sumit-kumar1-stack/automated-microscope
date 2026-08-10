@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type ChangeEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -17,6 +18,95 @@ import {
 import {
   ResearchValidationPanel,
 } from "@/components/ResearchValidationPanel";
+
+import {
+  runMlInference,
+  type MlInferenceResult,
+} from "@/lib/ml-inference";
+
+import {
+  MlAnalysisPanel,
+} from "@/components/ml/MlAnalysisPanel";
+
+import {
+  MicroscopeHeader,
+} from "@/components/microscope/MicroscopeHeader";
+
+import {
+  CameraControlPanel,
+} from "@/components/microscope/CameraControlPanel";
+
+import {
+  ZAxisControlPanel,
+} from "@/components/microscope/ZAxisControlPanel";
+
+import {
+  FocusResultPanel,
+} from "@/components/microscope/FocusResultPanel";
+
+import {
+  MicroscopeStatusStrip,
+} from "@/components/microscope/MicroscopeStatusStrip";
+
+import {
+  OpticalViewer,
+} from "@/components/microscope/OpticalViewer";
+
+import {
+  ResearchImageSourcePanel,
+} from "@/components/microscope/ResearchImageSourcePanel";
+
+import {
+  HardwareBridgePanel,
+} from "@/components/microscope/HardwareBridgePanel";
+
+import {
+  ResearchPipelinePanel,
+} from "@/components/microscope/ResearchPipelinePanel";
+
+import {
+  ScanControlPanel,
+} from "@/components/microscope/ScanControlPanel";
+
+import {
+  ScanGridPreview,
+} from "@/components/microscope/ScanGridPreview";
+
+import {
+  ScanExecutionControls,
+} from "@/components/microscope/ScanExecutionControls";
+
+import {
+  ScanProgressPanel,
+} from "@/components/microscope/ScanProgressPanel";
+
+import {
+  useSlideScan,
+} from "@/hooks/useSlideScan";
+
+import {
+  useSlideScanWorkflow,
+} from "@/hooks/useSlideScanWorkflow";
+
+import {
+  useMlServiceTelemetry,
+} from "@/hooks/useMlServiceTelemetry";
+
+import {
+  MlModelTelemetryPanel,
+} from "@/components/microscope/MlModelTelemetryPanel";
+
+import {
+  SlideScanSummaryPanel,
+} from "@/components/microscope/SlideScanSummaryPanel";
+
+import {
+  ScanFieldResultsPanel,
+} from "@/components/microscope/ScanFieldResultsPanel";
+
+import {
+  ExperimentStatusPanel,
+} from "@/components/microscope/ExperimentStatusPanel";
 
 import {
   MICROSCOPE_CONFIG,
@@ -101,6 +191,19 @@ type LogEntry = {
   message: string;
 };
 
+type ResearchImageTransform = {
+  sourceWidth: number;
+  sourceHeight: number;
+
+  scale: number;
+
+  offsetX: number;
+  offsetY: number;
+
+  displayWidth: number;
+  displayHeight: number;
+};
+
 /* =========================================================
    CONFIG
    ========================================================= */
@@ -140,11 +243,66 @@ function clamp(
   );
 }
 
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+): Promise<Blob> {
+  return new Promise(
+    (
+      resolve,
+      reject,
+    ) => {
+      canvas.toBlob(
+        (
+          blob,
+        ) => {
+          if (
+            !blob
+          ) {
+            reject(
+              new Error(
+                "Unable to encode microscope frame for ML inference.",
+              ),
+            );
+
+            return;
+          }
+
+          resolve(
+            blob,
+          );
+        },
+        "image/png",
+      );
+    },
+  );
+}
+
 /* =========================================================
    MAIN COMPONENT
    ========================================================= */
 
 export function MicroscopePrototype() {
+  const {
+    config:
+      scanConfig,
+
+    setConfig:
+      setScanConfig,
+
+    resetConfig:
+      resetScanConfig,
+
+    plan:
+      scanPlan,
+
+    planError:
+      scanPlanError,
+
+    travelUm:
+      scanTravelUm,
+  } =
+    useSlideScan();
+
   /* -------------------------------------------------------
      CANVAS / VIDEO REFS
      ------------------------------------------------------- */
@@ -173,6 +331,17 @@ export function MicroscopePrototype() {
     useRef<HTMLCanvasElement | null>(
       null,
     );
+
+
+  const researchImageFileRef =
+  useRef<File | null>(
+    null,
+  );
+
+const researchImageTransformRef =
+  useRef<ResearchImageTransform | null>(
+    null,
+  );
 
   const videoRef =
     useRef<HTMLVideoElement | null>(
@@ -354,6 +523,26 @@ export function MicroscopePrototype() {
   ] =
     useState<
       CellAnalysisResult | null
+    >(
+      null,
+    );
+
+  const [
+    mlResult,
+    setMlResult,
+  ] =
+    useState<
+      MlInferenceResult | null
+    >(
+      null,
+    );
+
+  const [
+   researchImageName,
+   setResearchImageName,
+  ] =
+    useState<
+      string | null
     >(
       null,
     );
@@ -592,6 +781,10 @@ export function MicroscopePrototype() {
           null,
         );
 
+        setMlResult(
+          null,
+        );
+
         const overlay =
           analysisOverlayRef.current;
 
@@ -740,7 +933,7 @@ export function MicroscopePrototype() {
               100,
             );
 
-          const text =
+          const labelText =
             `${label} ${score}`;
 
           ctx.font =
@@ -748,7 +941,7 @@ export function MicroscopePrototype() {
 
           const textWidth =
             ctx.measureText(
-              text,
+              labelText,
             ).width;
 
           const labelWidth =
@@ -782,11 +975,233 @@ export function MicroscopePrototype() {
             "#ffffff";
 
           ctx.fillText(
-            text,
+            labelText,
             x +
             5,
             labelY +
             12,
+          );
+        }
+      },
+      [],
+    );
+
+  /* =======================================================
+     DRAW ML PARASITE OVERLAY
+     ======================================================= */
+
+  const drawMlAnalysisOverlay =
+    useCallback(
+      (
+        result:
+          MlInferenceResult,
+      ) => {
+        const overlay =
+          analysisOverlayRef.current;
+
+        if (
+          !overlay
+        ) {
+          return;
+        }
+
+        const ctx =
+          overlay.getContext(
+            "2d",
+          );
+
+        if (
+          !ctx
+        ) {
+          return;
+        }
+
+        ctx.clearRect(
+          0,
+          0,
+          overlay.width,
+          overlay.height,
+        );
+
+        const researchTransform =
+          researchImageTransformRef.current;
+
+        const usesResearchTransform =
+          researchTransform !==
+            null &&
+          researchTransform.sourceWidth ===
+            result.image.width &&
+          researchTransform.sourceHeight ===
+            result.image.height;
+
+        const scaleX =
+          usesResearchTransform
+            ? researchTransform.scale
+            : overlay.width /
+              result.image.width;
+
+        const scaleY =
+          usesResearchTransform
+            ? researchTransform.scale
+            : overlay.height /
+              result.image.height;
+
+        const offsetX =
+          usesResearchTransform
+            ? researchTransform.offsetX
+            : 0;
+
+        const offsetY =
+          usesResearchTransform
+            ? researchTransform.offsetY
+            : 0;
+
+        for (
+          const candidate
+          of result.candidates
+        ) {
+          const x =
+            offsetX +
+            candidate.bbox.x1 *
+            scaleX;
+
+          const y =
+            offsetY +
+            candidate.bbox.y1 *
+            scaleY;
+
+          const width =
+            (
+              candidate.bbox.x2 -
+              candidate.bbox.x1
+            ) *
+            scaleX;
+
+          const height =
+            (
+              candidate.bbox.y2 -
+              candidate.bbox.y1
+            ) *
+            scaleY;
+
+          let stroke =
+            "#ffd166";
+
+          let background =
+            "rgba(77, 58, 12, 0.92)";
+
+          if (
+            candidate.stage ===
+            "ring"
+          ) {
+            stroke =
+              "#64d8ff";
+
+            background =
+              "rgba(20, 76, 96, 0.92)";
+          } else if (
+            candidate.stage ===
+            "trophozoite"
+          ) {
+            stroke =
+              "#76e6a5";
+
+            background =
+              "rgba(25, 92, 56, 0.92)";
+          } else if (
+            candidate.stage ===
+            "schizont"
+          ) {
+            stroke =
+              "#d3a6ff";
+
+            background =
+              "rgba(73, 43, 103, 0.92)";
+          } else if (
+            candidate.stage ===
+            "gametocyte"
+          ) {
+            stroke =
+              "#ff9aaf";
+
+            background =
+              "rgba(109, 40, 57, 0.92)";
+          }
+
+          ctx.lineWidth =
+            2.4;
+
+          ctx.strokeStyle =
+            stroke;
+
+          ctx.strokeRect(
+            x,
+            y,
+            width,
+            height,
+          );
+
+          const stageConfidence =
+            Math.round(
+              candidate
+                .stage_confidence *
+              100,
+            );
+
+          const detectorConfidence =
+            Math.round(
+              candidate
+                .detector_confidence *
+              100,
+            );
+
+          const labelText =
+            `${candidate.stage.toUpperCase()} S${stageConfidence} D${detectorConfidence}`;
+
+          ctx.font =
+            "700 11px Arial";
+
+          const textWidth =
+            ctx.measureText(
+              labelText,
+            ).width;
+
+          const labelWidth =
+            textWidth +
+            10;
+
+          const labelHeight =
+            18;
+
+          const labelY =
+            y >=
+            labelHeight +
+            4
+              ? y -
+                labelHeight -
+                2
+              : y +
+                2;
+
+          ctx.fillStyle =
+            background;
+
+          ctx.fillRect(
+            x,
+            labelY,
+            labelWidth,
+            labelHeight,
+          );
+
+          ctx.fillStyle =
+            "#ffffff";
+
+          ctx.fillText(
+            labelText,
+            x +
+            5,
+            labelY +
+            13,
           );
         }
       },
@@ -1672,7 +2087,7 @@ export function MicroscopePrototype() {
           !cameraActive
         ) {
           setStatus(
-            "HARDWARE CONNECTED • CAMERA REQUIRED",
+            "HARDWARE CONNECTED â€¢ CAMERA REQUIRED",
           );
         } else if (
           !hardwareArmed
@@ -2231,7 +2646,7 @@ export function MicroscopePrototype() {
           );
 
           setStatus(
-            "HARDWARE CONNECTED • CAMERA REQUIRED",
+            "HARDWARE CONNECTED â€¢ CAMERA REQUIRED",
           );
 
           log(
@@ -2407,6 +2822,21 @@ export function MicroscopePrototype() {
 
         clearCellAnalysis();
 
+        if (
+          nextMode !==
+          "simulation"
+        ) {
+          researchImageFileRef.current =
+            null;
+
+          researchImageTransformRef.current =
+            null;
+
+          setResearchImageName(
+            null,
+          );
+        }
+
         setHardwareArmed(
           false,
         );
@@ -2470,6 +2900,295 @@ export function MicroscopePrototype() {
       ],
     );
 
+    /* =======================================================
+   STATIC RESEARCH IMAGE
+   ======================================================= */
+
+const loadResearchImage =
+  useCallback(
+    async (
+      event:
+        ChangeEvent<HTMLInputElement>,
+    ) => {
+      const file =
+        event.target.files?.[0];
+
+      /*
+       * Allow selecting the same file again later.
+       */
+      event.target.value =
+        "";
+
+      if (
+        !file
+      ) {
+        return;
+      }
+
+      if (
+        !file.type.startsWith(
+          "image/",
+        )
+      ) {
+        log(
+          "Research image upload rejected: select a PNG, JPEG, WebP or another browser-readable image.",
+          "warning",
+        );
+
+        return;
+      }
+
+      if (
+        mode !==
+        "simulation"
+      ) {
+        log(
+          "Static research-image loading is currently available in Simulation mode only.",
+          "warning",
+        );
+
+        return;
+      }
+
+      const canvas =
+        canvasRef.current;
+
+      if (
+        !canvas
+      ) {
+        log(
+          "Research image could not be loaded because the optical canvas is unavailable.",
+          "error",
+        );
+
+        return;
+      }
+
+      try {
+        clearCellAnalysis();
+
+        const bitmap =
+          await createImageBitmap(
+            file,
+          );
+
+        try {
+          const ctx =
+            canvas.getContext(
+              "2d",
+              {
+                willReadFrequently:
+                  true,
+              },
+            );
+
+          if (
+            !ctx
+          ) {
+            throw new Error(
+              "Optical canvas context is unavailable.",
+            );
+          }
+
+          /*
+           * Preserve microscopy-image geometry.
+           * Do NOT independently stretch X and Y.
+           */
+          const scale =
+            Math.min(
+              canvas.width /
+                bitmap.width,
+              canvas.height /
+                bitmap.height,
+            );
+
+          const displayWidth =
+            bitmap.width *
+            scale;
+
+          const displayHeight =
+            bitmap.height *
+            scale;
+
+          const offsetX =
+            (
+              canvas.width -
+              displayWidth
+            ) /
+            2;
+
+          const offsetY =
+            (
+              canvas.height -
+              displayHeight
+            ) /
+            2;
+
+          ctx.save();
+
+          ctx.clearRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height,
+          );
+
+          /*
+           * Neutral background for possible
+           * letterbox areas.
+           */
+          ctx.fillStyle =
+            "#05080b";
+
+          ctx.fillRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height,
+          );
+
+          ctx.imageSmoothingEnabled =
+            true;
+
+          ctx.imageSmoothingQuality =
+            "high";
+
+          ctx.drawImage(
+            bitmap,
+            offsetX,
+            offsetY,
+            displayWidth,
+            displayHeight,
+          );
+
+          ctx.restore();
+
+          researchImageFileRef.current =
+            file;
+
+          researchImageTransformRef.current =
+            {
+              sourceWidth:
+                bitmap.width,
+
+              sourceHeight:
+                bitmap.height,
+
+              scale,
+
+              offsetX,
+
+              offsetY,
+
+              displayWidth,
+
+              displayHeight,
+            };
+
+          setResearchImageName(
+            file.name,
+          );
+
+          /*
+           * Focus score shown here describes the
+           * rendered research image, not a clinical
+           * quality measure.
+           */
+          const image =
+            ctx.getImageData(
+              0,
+              0,
+              canvas.width,
+              canvas.height,
+            );
+
+          const score =
+            calculateLaplacianVariance(
+              image,
+            );
+
+          setFocusScore(
+            score,
+          );
+
+          setStatus(
+            "STATIC RESEARCH IMAGE",
+          );
+
+          log(
+            `Research image loaded: ${file.name} (${bitmap.width}x${bitmap.height}).`,
+            "success",
+          );
+        } finally {
+          bitmap.close();
+        }
+      } catch (
+        error
+      ) {
+        researchImageFileRef.current =
+          null;
+
+        researchImageTransformRef.current =
+          null;
+
+        setResearchImageName(
+          null,
+        );
+
+        log(
+          error instanceof
+            Error
+            ? error.message
+            : "Unable to load research image.",
+          "error",
+        );
+      }
+    },
+    [
+      clearCellAnalysis,
+      log,
+      mode,
+    ],
+  );
+
+
+const clearResearchImage =
+  useCallback(
+    () => {
+      researchImageFileRef.current =
+        null;
+
+      researchImageTransformRef.current =
+        null;
+
+      setResearchImageName(
+        null,
+      );
+
+      clearCellAnalysis();
+
+      if (
+        mode ===
+        "simulation"
+      ) {
+        renderSimulationAtZ(
+          zRef.current,
+        );
+
+        log(
+          "Static research image cleared. Synthetic simulation restored.",
+          "info",
+        );
+      }
+    },
+    [
+      clearCellAnalysis,
+      log,
+      mode,
+      renderSimulationAtZ,
+    ],
+  );
+
   /* =======================================================
      FIELD ANALYSIS + REPORT SNAPSHOT
      ======================================================= */
@@ -2483,9 +3202,14 @@ export function MicroscopePrototype() {
           return;
         }
 
+        const isMlBloodParasiteProfile =
+          activeProfile.id ===
+          "blood-parasite-research";
+
         if (
           activeProfile.status !==
-          "ready"
+            "ready" &&
+          !isMlBloodParasiteProfile
         ) {
           log(
             `${activeProfile.name} currently contains knowledge configuration only. A validated target detector has not been installed.`,
@@ -2544,6 +3268,10 @@ export function MicroscopePrototype() {
             CellAnalysisResult | null =
               null;
 
+          let currentMlResult:
+            MlInferenceResult | null =
+              null;
+
           /*
            * ----------------------------------------------
            * PROFILE-BASED DETECTOR ROUTING
@@ -2551,11 +3279,52 @@ export function MicroscopePrototype() {
            */
 
           if (
+            isMlBloodParasiteProfile
+          ) {
+            setAnalysisResult(
+              null,
+            );
+
+            const researchFile =
+              mode ===
+                "simulation"
+                ? researchImageFileRef.current
+                : null;
+
+            const inferenceImage:
+              Blob =
+                researchFile ??
+                await canvasToBlob(
+                  source,
+                );
+
+            const inferenceFilename =
+              researchFile?.name ??
+              `microscope-frame-${Date.now()}.png`;
+
+            currentMlResult =
+              await runMlInference(
+                inferenceImage,
+                inferenceFilename,
+              );
+
+            setMlResult(
+              currentMlResult,
+            );
+
+            drawMlAnalysisOverlay(
+              currentMlResult,
+            );
+          } else if (
             activeProfile
               .detector
               .kind ===
             "blood-color-components"
           ) {
+            setMlResult(
+              null,
+            );
+
             const analysisCanvas =
               getAnalysisCanvas();
 
@@ -2621,6 +3390,10 @@ export function MicroscopePrototype() {
              * No biological classification.
              */
             setAnalysisResult(
+              null,
+            );
+
+            setMlResult(
               null,
             );
           }
@@ -2720,6 +3493,13 @@ export function MicroscopePrototype() {
           await refreshAnalysisHistory();
 
           if (
+            currentMlResult
+          ) {
+            log(
+              `ML analysis complete: ${currentMlResult.candidate_count} parasite-like research candidate${currentMlResult.candidate_count === 1 ? "" : "s"} using ${currentMlResult.model_version}; inference ${currentMlResult.timing_ms.inference.toFixed(1)} ms.`,
+              "success",
+            );
+          } else if (
             result
           ) {
             log(
@@ -2754,6 +3534,7 @@ export function MicroscopePrototype() {
         cameraActive,
         clearCellAnalysis,
         drawCellAnalysisOverlay,
+        drawMlAnalysisOverlay,
         focusScore,
         getAnalysisCanvas,
         log,
@@ -2762,6 +3543,462 @@ export function MicroscopePrototype() {
         status,
       ],
     );
+
+  /* =======================================================
+     PHASE 8 SLIDE-SCAN WORKFLOW
+     ======================================================= */
+
+  const scanMoveToZ =
+    useCallback(
+      async (
+        candidateZ:
+          number,
+
+        signal:
+          AbortSignal,
+      ) => {
+        await moveStageTo(
+          candidateZ,
+          signal,
+        );
+      },
+      [
+        moveStageTo,
+      ],
+    );
+
+
+  const scanMeasureFocus =
+    useCallback(
+      async (
+        candidateZ:
+          number,
+
+        field:
+          import("@/lib/scan").ScanField,
+      ) => {
+        void field;
+
+        return renderSimulationAtZ(
+          candidateZ,
+        );
+      },
+      [
+        renderSimulationAtZ,
+      ],
+    );
+
+
+  const scanCaptureFrame =
+    useCallback(
+      async (
+        field:
+          import("@/lib/scan").ScanField,
+
+        signal:
+          AbortSignal,
+      ): Promise<
+        import("@/lib/scan").ScanAcquiredFrame
+      > => {
+        if (
+          signal.aborted
+        ) {
+          throw new DOMException(
+            "Scan frame capture aborted before start.",
+            "AbortError",
+          );
+        }
+
+        const researchFile =
+          researchImageFileRef.current;
+
+        const researchTransform =
+          researchImageTransformRef.current;
+
+        if (
+          researchFile &&
+          researchTransform
+        ) {
+          return {
+            fieldId:
+              field.id,
+
+            filename:
+              `${field.id}-${researchFile.name}`,
+
+            blob:
+              researchFile,
+
+            mimeType:
+              researchFile.type ||
+              "application/octet-stream",
+
+            width:
+              researchTransform.sourceWidth,
+
+            height:
+              researchTransform.sourceHeight,
+
+            capturedAtMs:
+              Date.now(),
+
+            sourceKind:
+              "uploaded",
+
+            metadata: {
+              row:
+                field.row,
+
+              column:
+                field.column,
+
+              stageXUm:
+                field.xUm,
+
+              stageYUm:
+                field.yUm,
+
+              simulatedXY:
+                true,
+
+              researchOnly:
+                true,
+            },
+          };
+        }
+
+        const source =
+          canvasRef.current;
+
+        if (
+          !source
+        ) {
+          throw new Error(
+            `Scan ${field.id}: optical canvas is unavailable.`,
+          );
+        }
+
+        const blob =
+          await canvasToBlob(
+            source,
+          );
+
+        if (
+          signal.aborted
+        ) {
+          throw new DOMException(
+            "Scan frame capture aborted.",
+            "AbortError",
+          );
+        }
+
+        return {
+          fieldId:
+            field.id,
+
+          filename:
+            `scan-${field.id}-${Date.now()}.png`,
+
+          blob,
+
+          mimeType:
+            "image/png",
+
+          width:
+            source.width,
+
+          height:
+            source.height,
+
+          capturedAtMs:
+            Date.now(),
+
+          sourceKind:
+            "simulation",
+
+          metadata: {
+            row:
+              field.row,
+
+            column:
+              field.column,
+
+            stageXUm:
+              field.xUm,
+
+            stageYUm:
+              field.yUm,
+
+            simulatedXY:
+              true,
+
+            researchOnly:
+              true,
+          },
+        };
+      },
+      [],
+    );
+
+
+  const scanWorkflowCallbacks =
+    useMemo(
+      () => ({
+        moveToZ:
+          scanMoveToZ,
+
+        measureFocus:
+          scanMeasureFocus,
+
+        captureFrame:
+          scanCaptureFrame,
+
+        beforeStart:
+          () => {
+            clearCellAnalysis();
+
+            setAutofocusSamples(
+              [],
+            );
+
+            setProgress(
+              0,
+            );
+          },
+
+        beforeAbort:
+          () => {
+            cancelAutofocus();
+          },
+
+        onAutofocusSample:
+          (
+            _field:
+              import("@/lib/scan").ScanField,
+
+            sample:
+              AutofocusSample,
+          ) => {
+            setAutofocusSamples(
+              (
+                current,
+              ) =>
+                [
+                  ...current,
+                  sample,
+                ].slice(
+                  -80,
+                ),
+            );
+          },
+
+        onAutofocusResult:
+          (
+            result:
+              import("@/lib/scan").ScanAutofocusResult,
+          ) => {
+            setBestZ(
+              result.bestZ,
+            );
+
+            setBestScore(
+              result.bestScore,
+            );
+
+            setProgress(
+              100,
+            );
+
+            setStatus(
+              `SCAN AUTOFOCUS LOCKED • ${result.fieldId}`,
+            );
+          },
+
+        onMlResult:
+          (
+            field:
+              import("@/lib/scan").ScanField,
+
+            result:
+              MlInferenceResult,
+          ) => {
+            setMlResult(
+              result,
+            );
+
+            drawMlAnalysisOverlay(
+              result,
+            );
+
+            log(
+              `Scan ${field.id}: ${result.candidate_count} research candidate${result.candidate_count === 1 ? "" : "s"}; inference ${result.timing_ms.inference.toFixed(
+                1,
+              )} ms.`,
+              "success",
+            );
+          },
+
+        onLog:
+          log,
+      }),
+      [
+        cancelAutofocus,
+        clearCellAnalysis,
+        drawMlAnalysisOverlay,
+        log,
+        scanCaptureFrame,
+        scanMeasureFocus,
+        scanMoveToZ,
+      ],
+    );
+
+
+  const scanAutofocusConfig =
+    useMemo(
+      () => ({
+        minZ:
+          SIMULATION.minZ,
+
+        maxZ:
+          SIMULATION.maxZ,
+
+        coarseStartZ:
+          SIMULATION.coarseStartZ,
+
+        coarseEndZ:
+          SIMULATION.coarseEndZ,
+
+        coarseStepZ:
+          SIMULATION.coarseStepZ,
+
+        fineRadiusZ:
+          SIMULATION.fineRadiusZ,
+
+        settleMs:
+          SIMULATION.settleMs,
+
+        initialZ:
+          z,
+      }),
+      [
+        z,
+      ],
+    );
+
+
+  const {
+    snapshot:
+      scanSnapshot,
+
+    stagePosition:
+      scanStagePosition,
+
+    summary:
+      scanSlideSummary,
+
+    capturedFieldCount:
+      scanCapturedFieldCount,
+
+    analyzedFieldCount:
+      scanAnalyzedFieldCount,
+
+    candidateCount:
+      scanCandidateCount,
+
+    starting:
+      scanStarting,
+
+    error:
+      scanExecutionError,
+
+    isActive:
+      scanExecutionActive,
+
+    canPause:
+      scanCanPause,
+
+    canResume:
+      scanCanResume,
+
+    canAbort:
+      scanCanAbort,
+
+    start:
+      startSlideScan,
+
+    pause:
+      pauseSlideScan,
+
+    resume:
+      resumeSlideScan,
+
+    abort:
+      abortSlideScan,
+
+    reset:
+      resetSlideScanExecution,
+  } =
+    useSlideScanWorkflow(
+      {
+        plan:
+          scanPlan,
+
+        autofocus:
+          scanAutofocusConfig,
+
+        callbacks:
+          scanWorkflowCallbacks,
+
+        settleMs:
+          50,
+      },
+    );
+
+
+  const {
+    modelInfo:
+      mlModelInfo,
+
+    serviceStatus:
+      mlServiceStatus,
+
+    loading:
+      mlTelemetryLoading,
+
+    error:
+      mlTelemetryError,
+
+    lastCheckedAt:
+      mlTelemetryCheckedAt,
+
+    refresh:
+      refreshMlTelemetry,
+  } =
+    useMlServiceTelemetry();
+
+
+  const scanCanStart =
+    mode ===
+      "simulation" &&
+    activeProfile.id ===
+      "blood-parasite-research" &&
+    scanPlan !==
+      null &&
+    !scanExecutionActive &&
+    !running;
+
+
+  const scanModeMessage =
+    mode !==
+      "simulation"
+      ? "Automated slide-scan execution is currently limited to Simulation mode. Hardware XY remains adapter-ready but is not enabled in this research workstation."
+      : activeProfile.id !==
+          "blood-parasite-research"
+        ? "Select the blood-parasite research profile to run the ML slide-scan workflow."
+        : researchImageName
+          ? "Simulated XY execution will reuse the loaded research image at each planned field. This validates orchestration, not physical slide coverage."
+          : "Simulated XY execution uses the synthetic/current optical field. This validates orchestration, autofocus, acquisition, inference and aggregation without claiming physical slide coverage.";
+
 
   /* =======================================================
      COMPUTED VALUES
@@ -2828,8 +4065,10 @@ export function MicroscopePrototype() {
     hardwareArmed;
 
   const viewerLabel =
-    mode ===
-    "simulation"
+  researchImageName
+    ? "STATIC RESEARCH MICROSCOPY IMAGE"
+    : mode ===
+      "simulation"
       ? "SYNTHETIC BLOOD FIELD"
       : cameraActive
         ? mode ===
@@ -2843,7 +4082,10 @@ export function MicroscopePrototype() {
      ======================================================= */
 
   return (
-    <main className="shell">
+    <main
+      id="overview"
+      className="shell"
+    >
       <video
         ref={
           videoRef
@@ -2853,374 +4095,146 @@ export function MicroscopePrototype() {
         muted
       />
 
-      {/* ==================================================
-          HEADER
-          ================================================== */}
-
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">
-            AUTONOMOUS MICROSCOPY R&D
-          </p>
-
-          <h1>
-            Adaptive Focus & Automated Analysis Platform
-          </h1>
-
-          <p className="subtle">
-            Real image sharpness measurement •
-            profile-based research analysis •
-            downloadable reports •
-            hardware-ready microscope control
-          </p>
-        </div>
-
-        <div className="modeSwitch threeModes">
-          <button
-            className={
-              mode ===
-              "simulation"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              chooseMode(
-                "simulation",
-              )
-            }
-          >
-            Simulation
-          </button>
-
-          <button
-            className={
-              mode ===
-              "camera"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              chooseMode(
-                "camera",
-              )
-            }
-          >
-            Live Camera
-          </button>
-
-          <button
-            className={
-              mode ===
-              "hardware"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              chooseMode(
-                "hardware",
-              )
-            }
-          >
-            Hardware
-          </button>
-        </div>
-      </header>
+      <MicroscopeHeader
+        mode={
+          mode
+        }
+        onModeChange={
+          chooseMode
+        }
+      />
 
       {/* ==================================================
           TEST PROFILE
           ================================================== */}
 
-      <TestProfileSelector
-        profile={
-          activeProfile
-        }
-        onChange={(
-          profileId,
-        ) => {
-          clearCellAnalysis();
-
-          setLatestSnapshot(
-            null,
-          );
-
-          setSelectedProfileId(
+      <section
+        id="settings"
+        className="labSectionAnchor"
+      >
+        <TestProfileSelector
+          profile={
+            activeProfile
+          }
+          onChange={(
             profileId,
-          );
+          ) => {
+            clearCellAnalysis();
 
-          const profile =
-            getTestProfile(
+            setLatestSnapshot(
+              null,
+            );
+
+            setSelectedProfileId(
               profileId,
             );
 
-          log(
-            `Test profile selected: ${profile.name} v${profile.version}.`,
-            profile.status ===
-            "ready"
-              ? "info"
-              : "warning",
-          );
-        }}
-      />
+            const profile =
+              getTestProfile(
+                profileId,
+              );
 
-      <ResearchValidationPanel />
-
-      {/* ==================================================
-          STATUS
-          ================================================== */}
-
-      <section className="statusStrip">
-        <Stat
-          label="Input"
-          value={
-            mode ===
-            "simulation"
-              ? "SYNTHETIC"
-              : cameraActive
-                ? "LIVE CAMERA"
-                : "CAMERA OFF"
-          }
-          good={
-            mode ===
-            "simulation" ||
-            cameraActive
-          }
-        />
-
-        <Stat
-          label="Controller"
-          value={
-            mode !==
-            "hardware"
-              ? "N/A"
-              : !hardwareConnected
-                ? "DISCONNECTED"
-                : hardwareArmed
-                  ? "ARMED"
-                  : "DISARMED"
-          }
-          good={
-            mode !==
-            "hardware" ||
-            (
-              hardwareConnected &&
-              hardwareArmed
-            )
-          }
-        />
-
-        <Stat
-          label="Z position"
-          value={
-            mode ===
-            "camera"
-              ? "—"
-              : String(
-                  z,
-                )
-          }
-        />
-
-        <Stat
-          label="Focus score"
-          value={
-            focusScore.toFixed(
-              1,
-            )
-          }
-        />
-
-        <Stat
-          label={
-            mode ===
-            "simulation"
-              ? "Focus index"
-              : "Relative detail"
-          }
-          value={
-            `${relativeDetail}%`
-          }
-          good={
-            relativeDetail >
-            65
-          }
-        />
-
-        <Stat
-          label="State"
-          value={
-            status
-          }
-          good={
-            status.includes(
-              "LOCKED",
-            ) ||
-            status.includes(
-              "HIGH RELATIVE DETAIL",
-            ) ||
-            status ===
-            "FOCUSED"
-          }
+            log(
+              `Test profile selected: ${profile.name} v${profile.version}.`,
+              profile.status ===
+              "ready"
+                ? "info"
+                : "warning",
+            );
+          }}
         />
       </section>
+
+      <section
+        id="validation"
+        className="labSectionAnchor"
+      >
+        <ResearchValidationPanel />
+      </section>
+
+      <MicroscopeStatusStrip
+        mode={
+          mode
+        }
+        cameraActive={
+          cameraActive
+        }
+        hardwareConnected={
+          hardwareConnected
+        }
+        hardwareArmed={
+          hardwareArmed
+        }
+        z={
+          z
+        }
+        focusScore={
+          focusScore
+        }
+        relativeDetail={
+          relativeDetail
+        }
+        status={
+          status
+        }
+      />
 
       {/* ==================================================
           MAIN WORKSPACE
           ================================================== */}
 
       <section className="workspace">
-        {/* ================================================
-            OPTICAL VIEWER
-            ================================================ */}
-
-        <div className="viewerCard card">
-          <div className="cardHeader">
-            <div>
-              <span className="liveDot" />
-              {" "}
-              OPTICAL FIELD
-            </div>
-
-            <span>
-              {
-                viewerLabel
-              }
-            </span>
-          </div>
-
-          <div className="canvasWrap">
-            <canvas
-              ref={
-                canvasRef
-              }
-              width={
-                CANVAS.width
-              }
-              height={
-                CANVAS.height
-              }
-            />
-
-            <canvas
-              ref={
-                analysisOverlayRef
-              }
-              width={
-                CANVAS.width
-              }
-              height={
-                CANVAS.height
-              }
-              className="analysisOverlay"
-              aria-hidden="true"
-            />
-
-            {mode !==
-              "simulation" &&
-              !cameraActive && (
-                <div className="cameraEmptyState">
-                  <strong>
-                    Connect your laptop camera
-                    or USB microscope camera
-                  </strong>
-
-                  <span>
-                    Real camera pixels are
-                    used for focus measurement
-                    and field analysis.
-                  </span>
-
-                  <button
-                    className="primary cameraConnect"
-                    onClick={() =>
-                      void startCamera()
-                    }
-                  >
-                    START LIVE CAMERA
-                  </button>
-
-                  {cameraError && (
-                    <small>
-                      {
-                        cameraError
-                      }
-                    </small>
-                  )}
-                </div>
-              )}
-
-            <div className="reticle horizontal" />
-
-            <div className="reticle vertical" />
-
-            <div className="scaleBar">
-              100 μm
-            </div>
-          </div>
-
-          <div className="viewerFooter">
-            {mode ===
-              "simulation" && (
-                <span>
-                  Objective simulation:
-                  {" "}
-                  40×
-                </span>
-              )}
-
-            {mode ===
-              "simulation" && (
-                <span>
-                  Blur estimate:
-                  {" "}
-                  {blurForSimulationZ(
-                    z,
-                  ).toFixed(
-                    2,
-                  )}
-                  {" "}
-                  px
-                </span>
-              )}
-
-            {mode !==
-              "simulation" && (
-                <span>
-                  Focus measurement:
-                  {" "}
-                  {
-                    CAMERA.measurementWidth
-                  }
-                  ×
-                  {
-                    CAMERA.measurementHeight
-                  }
-                  {" "}
-                  pixels
-                </span>
-              )}
-
-            {mode ===
-              "hardware" && (
-                <span>
-                  Motor:
-                  {" "}
-                  {
-                    HARDWARE.motorStepsPerVirtualUnit
-                  }
-                  {" "}
-                  steps / virtual Z unit
-                </span>
-              )}
-
-            <span>
-              Laplacian variance:
-              {" "}
-              {focusScore.toFixed(
-                2,
-              )}
-            </span>
-          </div>
-        </div>
+        <OpticalViewer
+          canvasRef={
+            canvasRef
+          }
+          analysisOverlayRef={
+            analysisOverlayRef
+          }
+          canvasWidth={
+            CANVAS.width
+          }
+          canvasHeight={
+            CANVAS.height
+          }
+          viewerLabel={
+            viewerLabel
+          }
+          mode={
+            mode
+          }
+          cameraActive={
+            cameraActive
+          }
+          cameraError={
+            cameraError
+          }
+          onStartCamera={
+            startCamera
+          }
+          focusScore={
+            focusScore
+          }
+          relativeDetail={
+            relativeDetail
+          }
+          z={
+            z
+          }
+          analyzingField={
+            analyzingField
+          }
+          analysisComplete={
+            analysisResult !==
+            null
+          }
+          hardwareConnected={
+            hardwareConnected
+          }
+          hardwareArmed={
+            hardwareArmed
+          }
+        />
 
         {/* ================================================
             RIGHT CONTROL COLUMN
@@ -3229,420 +4243,177 @@ export function MicroscopePrototype() {
         <aside className="controlColumn">
           {/* CAMERA OR Z CONTROL */}
 
-          {mode ===
-          "camera" ? (
-            <div className="card controlCard">
-              <div className="cardHeader">
-                <div>
-                  LIVE IMAGE ANALYSIS
-                </div>
-
-                <span>
-                  NO MOTOR REQUIRED
-                </span>
-              </div>
-
-              <div className="zReadout">
-                {focusScore.toFixed(
-                  1,
-                )}
-
-                <small>
-                  {" "}
-                  focus score
-                </small>
-              </div>
-
-              <button
-                className="primary"
-                onClick={() =>
-                  void startCamera()
-                }
-              >
-                {cameraActive
-                  ? "RESTART CAMERA"
-                  : "START CAMERA"}
-              </button>
-
-              <button
-                onClick={
-                  stopCamera
-                }
-                disabled={
-                  !cameraActive
-                }
-              >
-                STOP CAMERA
-              </button>
-
-              <p className="tiny">
-                Higher Laplacian variance
-                generally means more edge
-                detail. Relative detail is
-                based on the strongest frame
-                observed in this camera
-                session.
-              </p>
-            </div>
+          {mode === "camera" ? (
+            <CameraControlPanel
+              focusScore={
+                focusScore
+              }
+              cameraActive={
+                cameraActive
+              }
+              onStartCamera={
+                startCamera
+              }
+              onStopCamera={
+                stopCamera
+              }
+            />
           ) : (
-            <div className="card controlCard">
-              <div className="cardHeader">
-                <div>
-                  Z-AXIS CONTROL
-                </div>
-
-                <span>
-                  {mode ===
-                  "hardware"
-                    ? hardwareReady
-                      ? "ARMED"
-                      : "INTERLOCKED"
-                    : "SIMULATED 0–100"}
-                </span>
-              </div>
-
-              <div className="zReadout">
-                {z}
-
-                <small>
-                  {mode ===
-                  "hardware"
-                    ? " session-relative units"
-                    : " virtual units"}
-                </small>
-              </div>
-
-              <input
-                aria-label="Z position"
-                type="range"
-                min={
-                  SIMULATION.minZ
-                }
-                max={
-                  SIMULATION.maxZ
-                }
-                value={
-                  z
-                }
-                disabled={
-                  running ||
-                  (
-                    mode ===
-                      "hardware" &&
-                    !hardwareReady
-                  )
-                }
-                onChange={(
-                  event,
-                ) =>
-                  void moveZManually(
-                    Number(
-                      event.target.value,
-                    ),
-                  )
-                }
-              />
-
-              <div className="buttonGrid">
-                <button
-                  onClick={() =>
-                    void moveZManually(
-                      z -
-                      5,
-                    )
-                  }
-                  disabled={
-                    running ||
-                    (
-                      mode ===
-                        "hardware" &&
-                      !hardwareReady
-                    )
-                  }
-                >
-                  Z − 5
-                </button>
-
-                <button
-                  onClick={() =>
-                    void moveZManually(
-                      z -
-                      1,
-                    )
-                  }
-                  disabled={
-                    running ||
-                    (
-                      mode ===
-                        "hardware" &&
-                      !hardwareReady
-                    )
-                  }
-                >
-                  Z − 1
-                </button>
-
-                <button
-                  onClick={() =>
-                    void moveZManually(
-                      z +
-                      1,
-                    )
-                  }
-                  disabled={
-                    running ||
-                    (
-                      mode ===
-                        "hardware" &&
-                      !hardwareReady
-                    )
-                  }
-                >
-                  Z + 1
-                </button>
-
-                <button
-                  onClick={() =>
-                    void moveZManually(
-                      z +
-                      5,
-                    )
-                  }
-                  disabled={
-                    running ||
-                    (
-                      mode ===
-                        "hardware" &&
-                      !hardwareReady
-                    )
-                  }
-                >
-                  Z + 5
-                </button>
-              </div>
-
-              <button
-                className="primary"
-                onClick={() =>
-                  void runAutofocus()
-                }
-                disabled={
-                  running ||
-                  (
-                    mode ===
-                      "hardware" &&
-                    !hardwareReady
-                  )
-                }
-              >
-                {running
-                  ? "AUTOFOCUS RUNNING…"
-                  : "RUN AUTOFOCUS"}
-              </button>
-
-              {running && (
-                <button
-                  onClick={
-                    cancelAutofocus
-                  }
-                >
-                  CANCEL AUTOFOCUS
-                </button>
-              )}
-
-              <div className="progress">
-                <span
-                  style={{
-                    width:
-                      `${progress}%`,
-                  }}
-                />
-              </div>
-            </div>
+            <ZAxisControlPanel
+              mode={
+                mode
+              }
+              z={
+                z
+              }
+              minZ={
+                SIMULATION.minZ
+              }
+              maxZ={
+                SIMULATION.maxZ
+              }
+              running={
+                running
+              }
+              hardwareReady={
+                hardwareReady
+              }
+              progress={
+                progress
+              }
+              onMoveZ={
+                moveZManually
+              }
+              onRunAutofocus={
+                runAutofocus
+              }
+              onCancelAutofocus={
+                cancelAutofocus
+              }
+            />
           )}
 
           {/* FOCUS RESULT */}
 
-          <div className="card resultCard">
-            <div className="cardHeader">
-              <div>
-                {mode ===
-                "camera"
-                  ? "FOCUS TREND"
-                  : "FOCUS RESULT"}
-              </div>
-
-              <span>
-                {mode ===
-                "camera"
-                  ? "LIVE"
-                  : "COARSE → FINE"}
-              </span>
-            </div>
-
-            {mode ===
-            "camera" ? (
-              <>
-                <div
-                  className="focusTrend"
-                  aria-label="Live focus score history"
-                >
-                  {cameraHistory.length ===
-                  0 ? (
-                    <div className="trendPlaceholder">
-                      Start camera to collect
-                      focus measurements.
-                    </div>
-                  ) : (
-                    cameraHistory.map(
-                      (
-                        value,
-                        index,
-                      ) => (
-                        <span
-                          key={`${index}-${value.toFixed(
-                            2,
-                          )}`}
-                          title={value.toFixed(
-                            1,
-                          )}
-                          style={{
-                            height:
-                              `${Math.max(
-                                4,
-                                (
-                                  value /
-                                  historyMax
-                                ) *
-                                100,
-                              )}%`,
-                          }}
-                        />
-                      ),
-                    )
-                  )}
-                </div>
-
-                <div className="resultRow">
-                  <span>
-                    Samples
-                  </span>
-
-                  <strong>
-                    {
-                      cameraHistory.length
-                    }
-                  </strong>
-                </div>
-
-                <div className="resultRow">
-                  <span>
-                    Session peak
-                  </span>
-
-                  <strong>
-                    {livePeakRef.current.toFixed(
-                      1,
-                    )}
-                  </strong>
-                </div>
-
-                <p className="tiny">
-                  Scores are calculated from
-                  downsampled real camera
-                  frames to reduce browser CPU
-                  usage.
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="resultRow">
-                  <span>
-                    Best Z
-                  </span>
-
-                  <strong>
-                    {bestZ ??
-                      "—"}
-                  </strong>
-                </div>
-
-                <div className="resultRow">
-                  <span>
-                    Peak score
-                  </span>
-
-                  <strong>
-                    {bestScore
-                      ? bestScore.toFixed(
-                          1,
-                        )
-                      : "—"}
-                  </strong>
-                </div>
-
-                <div className="resultRow">
-                  <span>
-                    Measurements
-                  </span>
-
-                  <strong>
-                    {
-                      autofocusSamples.length
-                    }
-                  </strong>
-                </div>
-
-                {mode ===
-                  "simulation" && (
-                    <div className="resultRow">
-                      <span>
-                        Known simulator optimum
-                      </span>
-
-                      <strong>
-                        {
-                          SIMULATION.optimalZ
-                        }
-                      </strong>
-                    </div>
-                  )}
-
-                <p className="tiny">
-                  {mode ===
-                  "hardware"
-                    ? "Hardware autofocus measures the live optics camera after each physical motor movement."
-                    : "The simulator optimum is shown only for validation. The search selects the best measured sharpness."}
-                </p>
-              </>
-            )}
-          </div>
+          <FocusResultPanel
+            mode={
+              mode
+            }
+            cameraHistory={
+              cameraHistory
+            }
+            historyMax={
+              historyMax
+            }
+            sessionPeak={
+              livePeakRef.current
+            }
+            bestZ={
+              bestZ
+            }
+            bestScore={
+              bestScore
+            }
+            autofocusSampleCount={
+              autofocusSamples.length
+            }
+            simulatorOptimalZ={
+              SIMULATION.optimalZ
+            }
+          />
 
           {/* FIELD ANALYSIS */}
 
-          <CellAnalysisPanel
-            result={
-              analysisResult
-            }
-            analyzing={
-              analyzingField
-            }
-            canAnalyze={
-              activeProfile.status ===
-                "ready" &&
-              (
-                mode ===
-                  "simulation" ||
-                cameraActive
-              )
-            }
-            onAnalyze={() =>
-              void runFieldAnalysis()
-            }
-            onClear={
-              clearCellAnalysis
-            }
-          />
+{activeProfile.id ===
+  "blood-parasite-research" && (
+    <ResearchImageSourcePanel
+      mode={
+        mode
+      }
+      researchImageName={
+        researchImageName
+      }
+      analyzingField={
+        analyzingField
+      }
+      onLoadImage={
+        loadResearchImage
+      }
+      onClear={
+        clearResearchImage
+      }
+    />
+  )}
+
+{activeProfile.id ===
+  "blood-parasite-research" ? (
+  <>
+    <MlAnalysisPanel
+      result={
+        mlResult
+      }
+      analyzing={
+        analyzingField
+      }
+      canAnalyze={
+        mode ===
+          "simulation" ||
+        cameraActive
+      }
+      onAnalyze={() =>
+        void runFieldAnalysis()
+      }
+      onClear={
+        clearCellAnalysis
+      }
+    />
+
+    <MlModelTelemetryPanel
+      serviceStatus={
+        mlServiceStatus
+      }
+      modelInfo={
+        mlModelInfo
+      }
+      loading={
+        mlTelemetryLoading
+      }
+      error={
+        mlTelemetryError
+      }
+      lastCheckedAt={
+        mlTelemetryCheckedAt
+      }
+      onRefresh={
+        refreshMlTelemetry
+      }
+    />
+  </>
+) : (
+  <CellAnalysisPanel
+    result={
+      analysisResult
+    }
+    analyzing={
+      analyzingField
+    }
+    canAnalyze={
+      activeProfile.status ===
+        "ready" &&
+      (
+        mode ===
+          "simulation" ||
+        cameraActive
+      )
+    }
+    onAnalyze={() =>
+      void runFieldAnalysis()
+    }
+    onClear={
+      clearCellAnalysis
+    }
+  />
+)}
 
           {/* KNOWLEDGE BASE */}
 
@@ -3665,155 +4436,191 @@ export function MicroscopePrototype() {
 
           {/* HARDWARE */}
 
-          <div className="card hardwareCard">
-            <div className="cardHeader">
-              <div>
-                HARDWARE BRIDGE
-              </div>
-
-              <span>
-                {hardwareConnected
-                  ? hardwareArmed
-                    ? "ARMED"
-                    : "DISARMED"
-                  : "OPTIONAL"}
-              </span>
-            </div>
-
-            <button
-              onClick={() =>
-                void connectHardware()
+          <div
+            id="hardware"
+            className="labSectionAnchor"
+          >
+            <HardwareBridgePanel
+              mode={
+                mode
               }
-              disabled={
+              hardwareConnected={
                 hardwareConnected
               }
-            >
-              {hardwareConnected
-                ? "CONTROLLER CONNECTED"
-                : "CONNECT USB CONTROLLER"}
-            </button>
-
-            {mode ===
-              "hardware" && (
-                <>
-                  <button
-                    onClick={() =>
-                      void startCamera()
-                    }
-                  >
-                    {cameraActive
-                      ? "RESTART OPTICS CAMERA"
-                      : "START OPTICS CAMERA"}
-                  </button>
-
-                  {!hardwareArmed ? (
-                    <button
-                      onClick={
-                        armHardware
-                      }
-                      disabled={
-                        !hardwareConnected ||
-                        !cameraActive
-                      }
-                    >
-                      ENABLE MOTOR CONTROL
-                    </button>
-                  ) : (
-                    <button
-                      onClick={
-                        disarmHardware
-                      }
-                    >
-                      DISARM MOTOR CONTROL
-                    </button>
-                  )}
-                </>
-              )}
-
-            <button
-              className="danger"
-              onClick={() =>
-                void emergencyStop()
+              hardwareArmed={
+                hardwareArmed
               }
-            >
-              EMERGENCY STOP
-            </button>
-
-            <p className="tiny">
-              Software interlocks require
-              serial + camera + explicit
-              arming. Physical limit switches
-              and hardware-side travel
-              protection are still required
-              before real microscope
-              attachment.
-            </p>
+              cameraActive={
+                cameraActive
+              }
+              onConnect={
+                connectHardware
+              }
+              onStartCamera={
+                startCamera
+              }
+              onArm={
+                armHardware
+              }
+              onDisarm={
+                disarmHardware
+              }
+              onEmergencyStop={
+                emergencyStop
+              }
+            />
           </div>
         </aside>
+      </section>
+
+      {/* ==================================================
+          SLIDE SCAN PLANNING + EXECUTION
+          ================================================== */}
+
+      <section
+        id="slide-scan"
+        className="bottomGrid labWorkspaceSection"
+      >
+        <ScanControlPanel
+          config={
+            scanConfig
+          }
+          plan={
+            scanPlan
+          }
+          planError={
+            scanPlanError
+          }
+          travelUm={
+            scanTravelUm
+          }
+          disabled={
+            scanExecutionActive ||
+            running
+          }
+          onChange={
+            setScanConfig
+          }
+          onReset={
+            resetScanConfig
+          }
+        />
+
+        <ScanGridPreview
+          plan={
+            scanPlan
+          }
+          snapshot={
+            scanSnapshot
+          }
+        />
+
+        <ScanExecutionControls
+          snapshot={
+            scanSnapshot
+          }
+          starting={
+            scanStarting
+          }
+          canStart={
+            scanCanStart
+          }
+          canPause={
+            scanCanPause
+          }
+          canResume={
+            scanCanResume
+          }
+          canAbort={
+            scanCanAbort
+          }
+          modeMessage={
+            scanModeMessage
+          }
+          onStart={
+            startSlideScan
+          }
+          onPause={
+            pauseSlideScan
+          }
+          onResume={
+            resumeSlideScan
+          }
+          onAbort={
+            abortSlideScan
+          }
+          onReset={
+            resetSlideScanExecution
+          }
+        />
+
+        <ScanProgressPanel
+          snapshot={
+            scanSnapshot
+          }
+          stagePosition={
+            scanStagePosition
+          }
+          error={
+            scanExecutionError
+          }
+        />
+      </section>
+
+      <section
+        id="experiments"
+        className="bottomGrid labWorkspaceSection"
+      >
+        <ExperimentStatusPanel
+          mode={
+            mode
+          }
+          profileName={
+            activeProfile.name
+          }
+          scanSnapshot={
+            scanSnapshot
+          }
+          analyzedFieldCount={
+            scanAnalyzedFieldCount
+          }
+          capturedFieldCount={
+            scanCapturedFieldCount
+          }
+          candidateCount={
+            scanCandidateCount
+          }
+          mlServiceStatus={
+            mlServiceStatus
+          }
+        />
+
+        <SlideScanSummaryPanel
+          summary={
+            scanSlideSummary
+          }
+        />
+
+        <ScanFieldResultsPanel
+          summary={
+            scanSlideSummary
+          }
+        />
       </section>
 
       {/* ==================================================
           PIPELINE + LOGS
           ================================================== */}
 
-      <section className="bottomGrid">
-        <div className="card researchCard">
-          <div className="cardHeader">
-            <div>
-              RESEARCH PIPELINE
-            </div>
-
-            <span>
-              PHASE 3.5 • PROFILES + REPORTING
-            </span>
-          </div>
-
-          <div className="pipeline">
-            <Pipeline
-              title="Acquire"
-              text={
-                mode ===
-                "simulation"
-                  ? "Synthetic validation frame"
-                  : "Real camera frame"
-              }
-            />
-
-            <b>
-              →
-            </b>
-
-            <Pipeline
-              title="Focus"
-              text={
-                mode ===
-                "camera"
-                  ? "Live Laplacian measurement"
-                  : "Coarse + fine Z search"
-              }
-            />
-
-            <b>
-              →
-            </b>
-
-            <Pipeline
-              title="Analyze"
-              text={
-                activeProfile.detector.label
-              }
-            />
-
-            <b>
-              →
-            </b>
-
-            <Pipeline
-              title="Report"
-              text="Snapshot + PDF + history"
-            />
-          </div>
-        </div>
+      <section className="bottomGrid labOperationsGrid">
+        <ResearchPipelinePanel
+          mode={
+            mode
+          }
+          detectorLabel={
+            activeProfile.detector.label
+          }
+        />
 
         <div className="card logCard">
           <div className="cardHeader">
@@ -3878,87 +4685,24 @@ export function MicroscopePrototype() {
           PERSISTENT ANALYSIS HISTORY
           ================================================== */}
 
-      <AnalysisHistory
-        items={
-          analysisHistory
-        }
-        onDelete={(
-          id,
-        ) =>
-          void removeHistoryRecord(
-            id,
-          )
-        }
-      />
-    </main>
-  );
-}
-
-/* =========================================================
-   SMALL UI COMPONENTS
-   ========================================================= */
-
-function Stat({
-  label,
-  value,
-  good = false,
-}: {
-  label:
-    string;
-
-  value:
-    string;
-
-  good?:
-    boolean;
-}) {
-  return (
-    <div className="stat">
-      <span>
-        {
-          label
-        }
-      </span>
-
-      <strong
-        className={
-          good
-            ? "good"
-            : ""
-        }
+      <section
+        id="reports"
+        className="labWorkspaceSection"
       >
-        {
-          value
-        }
-      </strong>
-    </div>
-  );
-}
-
-function Pipeline({
-  title,
-  text,
-}: {
-  title:
-    string;
-
-  text:
-    string;
-}) {
-  return (
-    <div className="pipelineBox">
-      <strong>
-        {
-          title
-        }
-      </strong>
-
-      <span>
-        {
-          text
-        }
-      </span>
-    </div>
+        <AnalysisHistory
+          items={
+            analysisHistory
+          }
+          onDelete={(
+            id,
+          ) =>
+            void removeHistoryRecord(
+              id,
+            )
+          }
+        />
+      </section>
+    </main>
   );
 }
 

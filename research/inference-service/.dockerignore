@@ -1,0 +1,13 @@
+# Reference copy. When building from the repository root, Docker uses the
+# sibling Dockerfile.dockerignore next to this Dockerfile.
+.git
+.next
+node_modules
+__pycache__
+*.pyc
+*.pyo
+*.log
+.venv
+research/focus-validation/.venv
+research/malaria-validation/data
+research/malaria-validation/outputs/runs
