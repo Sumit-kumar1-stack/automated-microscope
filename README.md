@@ -1,5 +1,8 @@
 # Automated Microscopy Research Workstation
 
+![Next.js](https://img.shields.io/badge/Next.js-000000?logo=nextdotjs&logoColor=white) ![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white) ![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?logo=opencv&logoColor=white) ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)
+
+
 ## Overview
 
 This project is a **production-style automated microscopy research prototype** for acquisition, focus measurement, autofocus, slide-scan orchestration, research analysis, reporting, and future microscope hardware control.
